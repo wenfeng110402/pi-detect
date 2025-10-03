@@ -7,12 +7,12 @@ def main():
     # 初始化树莓派摄像头
     cap = cv2.VideoCapture(0)
     
-    # 设置摄像头参数（根据需要调整分辨率）
+    # 设置摄像头参数-----分辨率也在这里设置：）
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
     
     if not cap.isOpened():
-        print("无法打开摄像头")
+        print("shit！where is my eye?")
         return
     
     while True:
@@ -20,7 +20,7 @@ def main():
         ret, frame = cap.read()
         
         if not ret:
-            print("无法获取画面")
+            print("wheres frame?")
             break
         
         # 使用YOLOv8模型进行推理
