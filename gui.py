@@ -8,23 +8,29 @@ import requests
 from PIL import Image, ImageTk
 import os
 import time
+from urllib.parse import urlparse
 
 
 class PersonDetectionGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Pi-Detect")
+        self.root.title("Pi-Detect 人体检测系统")
         self.root.geometry("800x600")
 
         # 初始化变量
         self.model = None
         self.cap = None
         self.is_detecting = False
-        self.is_image_mode = False  # 新增：标记是否为图片模式
+        self.is_image_mode = False  # 标记是否为图片模式
         self.current_source = None
         self.conf_threshold = 0.3
         self.skip_frames = 2
         self.img_size = 416
+        
+        # 初始化文件路径变量
+        self.camera_index_var = tk.StringVar(value="0")
+        self.file_path_var = tk.StringVar()
+        self.url_var = tk.StringVar()
 
         # 创建界面
         self.create_widgets()
@@ -139,13 +145,11 @@ class PersonDetectionGUI:
 
         if source_type == "camera":
             ttk.Label(self.input_frame, text="摄像头索引:").grid(row=0, column=0, sticky=tk.W)
-            self.camera_index_var = tk.StringVar(value="0")
             camera_entry = ttk.Entry(self.input_frame, textvariable=self.camera_index_var)
             camera_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(10, 0))
 
         elif source_type == "file":
             ttk.Label(self.input_frame, text="文件路径:").grid(row=0, column=0, sticky=tk.W)
-            self.file_path_var = tk.StringVar()
             file_entry = ttk.Entry(self.input_frame, textvariable=self.file_path_var)
             file_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(10, 0))
             file_button = ttk.Button(self.input_frame, text="浏览", command=self.browse_file)
@@ -153,7 +157,6 @@ class PersonDetectionGUI:
 
         elif source_type == "url":
             ttk.Label(self.input_frame, text="网络链接:").grid(row=0, column=0, sticky=tk.W)
-            self.url_var = tk.StringVar()
             url_entry = ttk.Entry(self.input_frame, textvariable=self.url_var)
             url_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(10, 0))
             download_button = ttk.Button(self.input_frame, text="下载并使用", command=self.download_and_use)
@@ -187,6 +190,30 @@ class PersonDetectionGUI:
         if file_path:
             self.file_path_var.set(file_path)
 
+    def get_filename_from_url(self, url):
+        # 从URL中提取文件名
+        parsed_url = urlparse(url)
+        file_name = os.path.basename(parsed_url.path)
+        
+        # 如果没有扩展名，根据内容类型添加
+        if not os.path.splitext(file_name)[1]:
+            try:
+                response = requests.head(url, timeout=10)
+                content_type = response.headers.get('content-type', '')
+                if 'image' in content_type:
+                    if 'jpeg' in content_type or 'jpg' in content_type:
+                        file_name += '.jpg'
+                    elif 'png' in content_type:
+                        file_name += '.png'
+                    else:
+                        file_name += '.jpg'  # 默认
+                else:
+                    file_name += '.mp4'  # 默认视频
+            except:
+                file_name += '.mp4'  # 默认
+                
+        return file_name
+
     def download_and_use(self):
         url = self.url_var.get()
         if not url:
@@ -197,23 +224,36 @@ class PersonDetectionGUI:
             self.status_var.set("正在下载文件...")
             self.root.update()
 
-            response = requests.get(url, timeout=30)
+            # 设置请求头，模拟浏览器访问
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            
+            response = requests.get(url, headers=headers, timeout=30)
             response.raise_for_status()
 
-            # 保存到临时文件
-            # 根据URL判断文件类型
-            if any(ext in url.lower() for ext in ['.jpg', '.jpeg', '.png', '.bmp', '.tiff']):
-                filename = "temp_image.jpg"
-            else:
-                filename = "temp_video.mp4"
-                
+            # 获取文件名
+            filename = self.get_filename_from_url(url)
+            
+            # 确保文件名唯一
+            counter = 1
+            original_filename = filename
+            while os.path.exists(filename):
+                name, ext = os.path.splitext(original_filename)
+                filename = f"{name}_{counter}{ext}"
+                counter += 1
+
+            # 保存文件
             with open(filename, "wb") as f:
                 f.write(response.content)
 
             self.file_path_var.set(filename)
-            self.status_var.set("文件下载完成")
-            messagebox.showinfo("成功", "文件下载完成，现在可以开始检测了")
+            self.status_var.set(f"文件下载完成: {filename}")
+            messagebox.showinfo("成功", f"文件下载完成: {filename}")
 
+        except requests.exceptions.RequestException as e:
+            self.status_var.set("网络请求错误")
+            messagebox.showerror("网络错误", f"下载文件时网络出错: {str(e)}")
         except Exception as e:
             self.status_var.set("下载失败")
             messagebox.showerror("错误", f"下载文件时出错: {str(e)}")
@@ -316,6 +356,7 @@ class PersonDetectionGUI:
         except Exception as e:
             self.status_var.set(f"处理图片时出错: {str(e)}")
         finally:
+            # 图片模式下，保持检测状态为False，但允许重新开始
             self.is_detecting = False
             self.start_button.config(state=tk.NORMAL)
             self.stop_button.config(state=tk.DISABLED)
@@ -367,6 +408,7 @@ class PersonDetectionGUI:
         while self.is_detecting and self.cap.isOpened():
             ret, frame = self.cap.read()
             if not ret:
+                # 视频结束，自动停止
                 break
 
             frame_idx += 1
@@ -392,6 +434,13 @@ class PersonDetectionGUI:
         # 释放资源
         if self.cap:
             self.cap.release()
+            
+        # 更新UI状态
+        self.is_detecting = False
+        self.start_button.config(state=tk.NORMAL)
+        self.stop_button.config(state=tk.DISABLED)
+        if self.status_var.get() == "正在检测...":
+            self.status_var.set("检测完成")
 
     def display_frame(self, frame):
         # 转换颜色格式
