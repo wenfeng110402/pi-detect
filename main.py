@@ -39,8 +39,6 @@ class ThreadedCamera:
             self.cap.release()
         except Exception:
             pass
-
-
 def parse_args():
     p = argparse.ArgumentParser(description="Lightweight YOLO person detection optimized for Raspberry Pi")
     p.add_argument('--source', type=int, default=0, help='camera source (default 0)')
@@ -50,8 +48,6 @@ def parse_args():
     p.add_argument('--show', action='store_true', help='show display window')
     p.add_argument('--device', type=str, default='cpu', help='inference device, e.g. cpu or 0 for cuda')
     return p.parse_args()
-
-
 def main():
     args = parse_args()
 

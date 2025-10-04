@@ -10,6 +10,7 @@ it ideal for monitoring and managing the number of people in a defined area (roo
 - Uses a compact YOLO model optimized for edge devices to balance accuracy and speed.
 - Simple setup intended to run with only a Raspberry Pi and a compatible camera (USB or Pi Camera).
 - Outputs bounding boxes and person counts suitable for area monitoring and simple analytics.
+- GUI interface for easy source selection and parameter tuning.
 
 ## Why this project
 
@@ -29,3 +30,52 @@ low-power hardware is preferred.
 
 - Raspberry Pi OS (32-bit or 64-bit) or another Debian-based distribution for Raspberry Pi.
 - Python 3.11+
+
+## Installation
+
+1. Clone the repository:
+   ```
+   git clone <repository-url>
+   cd pi-detect
+   ```
+
+2. Install required dependencies:
+   ```
+   pip install ultralytics opencv-python numpy pillow requests
+   ```
+
+## Usage
+
+You can use either the command-line interface or the graphical user interface:
+
+### Command-line interface
+
+```
+python main.py [--source CAMERA_INDEX] [--imgsz IMAGE_SIZE] [--skip SKIP_FRAMES] [--conf CONFIDENCE] [--show] [--device DEVICE]
+```
+
+Example:
+```
+python main.py --source 0 --imgsz 416 --skip 2 --conf 0.3 --show
+```
+
+### Graphical User Interface
+
+Run the GUI version:
+```
+python gui.py
+```
+
+In the GUI, you can:
+- Select between camera, local file, or network URL as media source
+- Adjust detection parameters (confidence threshold, skip frames, image size)
+- Start and stop detection with ease
+
+## Command-line Arguments
+
+- `--source`: Camera source index (default: 0)
+- `--imgsz`: Inference image size (default: 416)
+- `--skip`: Process every Nth frame (default: 2)
+- `--conf`: Confidence threshold (default: 0.3)
+- `--show`: Show display window
+- `--device`: Inference device (default: 'cpu')
