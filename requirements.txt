@@ -1,0 +1,5 @@
+opencv-python>=4.8.0
+PyQt6>=6.4.0
+ultralytics>=8.0.0
+numpy>=1.24.0
+PyQt-Fluent-Widgets>=1.0.0
