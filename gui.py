@@ -2,21 +2,21 @@ import sys
 import cv2
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QImage, QPixmap
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-                            QPushButton, QFileDialog, QStackedWidget, QComboBox, QButtonGroup, 
-                            QRadioButton, QGroupBox, QSpinBox)
+from PyQt6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
+                            QFileDialog, QStackedWidget, QButtonGroup, QRadioButton, QMessageBox, QLineEdit)
 from qfluentwidgets import NavigationInterface, NavigationItemPosition, FluentWindow
 from qfluentwidgets import FluentIcon as FIF
 from qfluentwidgets import (SubtitleLabel, PrimaryPushButton, Slider, SpinBox, ComboBox,
-                           setTheme, Theme, TransparentToolButton)
+                           setTheme, Theme, InfoBar, InfoBarPosition, PushButton, LineEdit, CardWidget)
 from ultralytics import YOLO
 import numpy as np
+from pathlib import Path
 
 
 class PersonDetectionGUI(FluentWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Pi-Detect Human Detection System")
+        self.setWindowTitle("Pi-Detect")
         self.resize(1000, 700)
         
         # Initialize variables
@@ -34,8 +34,14 @@ class PersonDetectionGUI(FluentWindow):
         self.file_path = ""
         self.url = ""
         
+        # Model variables - 所有YOLOv8模型都支持自动下载
+        self.available_models = ["yolov8n.pt", "yolov8s.pt", "yolov8m.pt", "yolov8l.pt", "yolov8x.pt"]
+        
         # UI initialization flag
         self.ui_initialized = False
+        
+        # InfoBar reference for model loading
+        self.model_loading_infobar = None
         
         # Load model
         self.load_model()
@@ -67,14 +73,19 @@ class PersonDetectionGUI(FluentWindow):
         layout = QVBoxLayout(page)
         layout.setContentsMargins(20, 20, 20, 20)
         
+        '''
         # Title
-        title = SubtitleLabel("Human Detection System")
+        title = SubtitleLabel("Pi Dectect")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
-        
+        '''
         # Media source selection
-        source_group = QGroupBox("Media Source")
-        source_layout = QVBoxLayout(source_group)
+        source_card = CardWidget()
+        source_card.setBorderRadius(8)
+        source_layout = QVBoxLayout(source_card)
+        
+        source_title = SubtitleLabel("Media Source")
+        source_layout.addWidget(source_title)
         
         # Source type selection
         source_type_layout = QHBoxLayout()
@@ -100,14 +111,14 @@ class PersonDetectionGUI(FluentWindow):
         # Camera input
         camera_layout = QHBoxLayout()
         camera_layout.addWidget(QLabel("Camera Index:"))
-        self.camera_spinbox = QSpinBox()
+        self.camera_spinbox = SpinBox()
         self.camera_spinbox.setRange(0, 10)
         self.camera_spinbox.setValue(0)
         camera_layout.addWidget(self.camera_spinbox)
         self.input_layout.addLayout(camera_layout)
         
         source_layout.addLayout(self.input_layout)
-        layout.addWidget(source_group)
+        layout.addWidget(source_card)
         
         # Video display area
         self.video_label = QLabel()
@@ -147,8 +158,9 @@ class PersonDetectionGUI(FluentWindow):
         layout.addWidget(title)
         
         # Confidence threshold setting
-        conf_group = QGroupBox("Confidence Threshold")
-        conf_layout = QHBoxLayout(conf_group)
+        conf_card = CardWidget()
+        conf_card.setBorderRadius(8)
+        conf_layout = QHBoxLayout(conf_card)
         conf_layout.addWidget(QLabel("Threshold:"))
         self.conf_slider = Slider(Qt.Orientation.Horizontal)
         self.conf_slider.setRange(1, 100)
@@ -156,38 +168,56 @@ class PersonDetectionGUI(FluentWindow):
         self.conf_value_label = QLabel("0.30")
         conf_layout.addWidget(self.conf_slider)
         conf_layout.addWidget(self.conf_value_label)
-        layout.addWidget(conf_group)
+        layout.addWidget(conf_card)
         
         # Skip frames setting
-        skip_group = QGroupBox("Skip Frames")
-        skip_layout = QHBoxLayout(skip_group)
+        skip_card = CardWidget()
+        skip_card.setBorderRadius(8)
+        skip_layout = QHBoxLayout(skip_card)
         skip_layout.addWidget(QLabel("Skip Frames:"))
-        self.skip_spinbox = QSpinBox()
+        self.skip_spinbox = SpinBox()
         self.skip_spinbox.setRange(1, 10)
         self.skip_spinbox.setValue(2)
         skip_layout.addWidget(self.skip_spinbox)
-        layout.addWidget(skip_group)
+        layout.addWidget(skip_card)
         
         # Image size setting
-        size_group = QGroupBox("Image Size")
-        size_layout = QHBoxLayout(size_group)
+        size_card = CardWidget()
+        size_card.setBorderRadius(8)
+        size_layout = QHBoxLayout(size_card)
         size_layout.addWidget(QLabel("Size:"))
-        self.size_spinbox = QSpinBox()
+        self.size_spinbox = SpinBox()
         self.size_spinbox.setRange(320, 1024)
         self.size_spinbox.setValue(416)
         self.size_spinbox.setSingleStep(32)
         size_layout.addWidget(self.size_spinbox)
-        layout.addWidget(size_group)
+        layout.addWidget(size_card)
         
         # Camera setting
-        camera_group = QGroupBox("Camera Settings")
-        camera_layout = QHBoxLayout(camera_group)
+        camera_card = CardWidget()
+        camera_card.setBorderRadius(8)
+        camera_layout = QHBoxLayout(camera_card)
         camera_layout.addWidget(QLabel("Default Camera Index:"))
-        self.camera_index_spinbox = QSpinBox()
+        self.camera_index_spinbox = SpinBox()
         self.camera_index_spinbox.setRange(0, 10)
         self.camera_index_spinbox.setValue(0)
         camera_layout.addWidget(self.camera_index_spinbox)
-        layout.addWidget(camera_group)
+        layout.addWidget(camera_card)
+        
+        # Model selection setting
+        model_card = CardWidget()
+        model_card.setBorderRadius(8)
+        model_layout = QVBoxLayout(model_card)
+        
+        # Model selection combo
+        model_selection_layout = QHBoxLayout()
+        model_selection_layout.addWidget(QLabel("Model:"))
+        self.model_combo = ComboBox()
+        self.update_model_combo()  # Populate with available models
+        model_selection_layout.addWidget(self.model_combo)
+        model_layout.addLayout(model_selection_layout)
+        
+        layout.addWidget(model_card)
         
         layout.addStretch()
         return page
@@ -201,6 +231,10 @@ class PersonDetectionGUI(FluentWindow):
         title = SubtitleLabel("About Pi-Detect")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
+        
+        description_card = CardWidget()
+        description_card.setBorderRadius(8)
+        description_layout = QVBoxLayout(description_card)
         
         description = QLabel("""
         <h2>Pi-Detect Human Detection System</h2>
@@ -221,7 +255,9 @@ class PersonDetectionGUI(FluentWindow):
         </ul>
         """)
         description.setWordWrap(True)
-        layout.addWidget(description)
+        description_layout.addWidget(description)
+        
+        layout.addWidget(description_card)
         layout.addStretch()
         
         return page
@@ -241,6 +277,7 @@ class PersonDetectionGUI(FluentWindow):
         self.skip_spinbox.valueChanged.connect(self.on_skip_frames_changed)
         self.size_spinbox.valueChanged.connect(self.on_img_size_changed)
         self.camera_index_spinbox.valueChanged.connect(self.on_camera_index_changed)
+        self.model_combo.currentTextChanged.connect(self.on_model_changed)
         
     def on_source_changed(self):
         # Clear current input layout widgets
@@ -260,7 +297,7 @@ class PersonDetectionGUI(FluentWindow):
             # Camera input
             camera_layout = QHBoxLayout()
             camera_layout.addWidget(QLabel("Camera Index:"))
-            self.camera_index_spinbox = QSpinBox()
+            self.camera_index_spinbox = SpinBox()
             self.camera_index_spinbox.setRange(0, 10)
             self.camera_index_spinbox.setValue(self.camera_index)
             camera_layout.addWidget(self.camera_index_spinbox)
@@ -270,13 +307,9 @@ class PersonDetectionGUI(FluentWindow):
             # File input
             file_layout = QHBoxLayout()
             file_layout.addWidget(QLabel("File Path:"))
-            self.file_input = ComboBox()
-            self.file_input.setEditable(True)
-            self.file_input.addItems([
-                "example.mp4",
-                "sample.avi"
-            ])
-            self.file_browse_button = QPushButton("Browse...")
+            self.file_input = LineEdit()  # 使用LineEdit替代ComboBox
+            self.file_input.setText("example.mp4")
+            self.file_browse_button = PushButton("Browse...")
             self.file_browse_button.clicked.connect(self.browse_file)
             file_layout.addWidget(self.file_input)
             file_layout.addWidget(self.file_browse_button)
@@ -286,22 +319,18 @@ class PersonDetectionGUI(FluentWindow):
             # URL input
             url_layout = QHBoxLayout()
             url_layout.addWidget(QLabel("URL:"))
-            self.url_input = ComboBox()
-            self.url_input.setEditable(True)
-            self.url_input.addItems([
-                "http://example.com/stream.mp4",
-                "rtsp://example.com/stream"
-            ])
+            self.url_input = LineEdit()
+            self.url_input.setText("http://example.com/stream.mp4")
             url_layout.addWidget(self.url_input)
             self.input_layout.addLayout(url_layout)
             
     def browse_file(self):
         file_path, _ = QFileDialog.getOpenFileName(
             self, "Select Media File", "", 
-            "Media Files (*.mp4 *.avi *.mov *.mkv *.jpg *.png);;All Files (*)"
+            "Media Files (*.mp4 *.avi *.mov *.mkv *.jpg *.jpeg *.png *.bmp *.tiff);;All Files (*)"
         )
         if file_path:
-            self.file_input.setCurrentText(file_path)
+            self.file_input.setText(file_path)
             
     def on_conf_threshold_changed(self, value):
         self.conf_threshold = value / 100.0
@@ -316,15 +345,91 @@ class PersonDetectionGUI(FluentWindow):
     def on_camera_index_changed(self, value):
         self.camera_index = value
         
+    def on_model_changed(self, model_name):
+        """当模型选择改变时重新加载模型"""
+        self.load_model()
+        
     def switch_to_page(self, index):
         self.stacked_widget.setCurrentIndex(index)
         
     def load_model(self):
         try:
-            self.model = YOLO('yolov8n.pt')
-            print("Model loaded successfully")
+            model_name = self.model_combo.currentText() if hasattr(self, 'model_combo') else 'yolov8n.pt'
+                
+            # Show loading info bar
+            self.model_loading_infobar = InfoBar.info(
+                title="Model Loading",
+                content=f"Loading model {model_name}...",
+                orient=Qt.Orientation.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP_RIGHT,
+                duration=-1,  # Keep showing until we close it
+                parent=self
+            )
+            
+            # Process events to show the info bar immediately
+            QApplication.processEvents()
+                
+            # Use Ultralytics auto-download feature
+            self.model = YOLO(model_name)
+            
+            # Close loading info bar with a slight delay to avoid RuntimeError
+            QTimer.singleShot(100, self._close_model_loading_infobar_success)
+            
+            InfoBar.success(
+                title="Model Loaded",
+                content=f"Model {model_name} loaded successfully",
+                orient=Qt.Orientation.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP_RIGHT,
+                duration=2000,
+                parent=self
+            )
+            print(f"Model {model_name} loaded successfully")
         except Exception as e:
-            print(f"Model loading failed: {e}")
+            # Close loading info bar with a slight delay to avoid RuntimeError
+            QTimer.singleShot(100, lambda: self._close_model_loading_infobar_error(str(e)))
+            
+    def _close_model_loading_infobar_success(self):
+        """延迟关闭加载提示InfoBar（成功情况）"""
+        if self.model_loading_infobar:
+            try:
+                self.model_loading_infobar.close()
+            except RuntimeError:
+                # Ignore "wrapped C/C++ object has been deleted" error
+                pass
+            finally:
+                self.model_loading_infobar = None
+                
+    def _close_model_loading_infobar_error(self, error_message):
+        """延迟关闭加载提示InfoBar（错误情况）并显示错误信息"""
+        if self.model_loading_infobar:
+            try:
+                self.model_loading_infobar.close()
+            except RuntimeError:
+                # Ignore "wrapped C/C++ object has been deleted" error
+                pass
+            finally:
+                self.model_loading_infobar = None
+                
+        InfoBar.error(
+            title="Model Loading Failed",
+            content=f"Failed to load model: {error_message}",
+            orient=Qt.Orientation.Horizontal,
+            isClosable=True,
+            position=InfoBarPosition.TOP_RIGHT,
+            duration=3000,
+            parent=self
+        )
+        print(f"Model loading failed: {error_message}")
+            
+    def update_model_combo(self):
+        """更新模型选择下拉框"""
+        self.model_combo.clear()
+        # Add all common models
+        common_models = ["yolov8n.pt", "yolov8s.pt", "yolov8m.pt", "yolov8l.pt", "yolov8x.pt"]
+        for model in common_models:
+            self.model_combo.addItem(model)
             
     def start_detection(self):
         self.is_detecting = True
@@ -334,26 +439,59 @@ class PersonDetectionGUI(FluentWindow):
         # Get input source
         if self.source_camera_radio.isChecked():
             self.current_source = self.camera_index_spinbox.value() if hasattr(self, 'camera_index_spinbox') else self.camera_index
+            self.is_image_mode = False
         elif self.source_file_radio.isChecked():
-            self.current_source = self.file_input.currentText() if hasattr(self, 'file_input') else ""
+            self.current_source = self.file_input.text() if hasattr(self, 'file_input') else ""
+            # Check if it's an image file
+            image_extensions = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff']
+            file_ext = Path(self.current_source).suffix.lower()
+            self.is_image_mode = file_ext in image_extensions
         elif self.source_url_radio.isChecked():
-            self.current_source = self.url_input.currentText() if hasattr(self, 'url_input') else ""
+            self.current_source = self.url_input.text() if hasattr(self, 'url_input') else ""
+            self.is_image_mode = False
             
-        # Initialize camera or video source
-        try:
-            self.cap = cv2.VideoCapture(self.current_source)
-            if not self.cap.isOpened():
-                raise Exception("Cannot open video source")
+        # Handle image mode differently from video mode
+        if self.is_image_mode:
+            self.process_image_file()
+        else:
+            # Initialize camera or video source
+            try:
+                self.cap = cv2.VideoCapture(self.current_source)
+                if not self.cap.isOpened():
+                    raise Exception("Cannot open video source")
+                    
+                self._frame_idx = 0
                 
-            self._frame_idx = 0
+                # Start timer
+                self.timer = QTimer(self)
+                self.timer.timeout.connect(self.update_frame)
+                self.timer.start(30)  # ~33 FPS
+                
+            except Exception as e:
+                print(f"Cannot start detection: {str(e)}")
+                self.stop_detection()
             
-            # Start timer
-            self.timer = QTimer(self)
-            self.timer.timeout.connect(self.update_frame)
-            self.timer.start(30)  # ~33 FPS
+    def process_image_file(self):
+        """处理图像文件"""
+        try:
+            # Read image file
+            frame = cv2.imread(self.current_source)
+            if frame is None:
+                raise Exception("Cannot read image file")
+                
+            # Process the image
+            processed_frame = self.detect_persons_in_frame(frame)
+            
+            # Display the result
+            self.display_frame(processed_frame)
+            
+            # Stop detection since it's a single image
+            self.is_detecting = False
+            self.start_button.setEnabled(True)
+            self.stop_button.setEnabled(False)
             
         except Exception as e:
-            print(f"Cannot start detection: {str(e)}")
+            print(f"Cannot process image file: {str(e)}")
             self.stop_detection()
             
     def update_frame(self):
