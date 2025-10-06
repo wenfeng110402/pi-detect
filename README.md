@@ -1,81 +1,210 @@
-# pi-detect (Hackberry project)
+# Pi Detect
 
-A lightweight person-detection project that runs smoothly on a Raspberry Pi using a YOLO model.
-This project is designed to detect people in a camera feed with minimal hardware requirements, making
-it ideal for monitoring and managing the number of people in a defined area (rooms, entryways, small venues).
+[![Hackatime Stats](https://hackatime-badge.hackclub.com/U09JFS1BU2V/pi-detect)](https://hackatime-badge.hackclub.com/U09JFS1BU2V/pi-detect)
 
-## Key features
+## Project Introduction
 
-- Real-time person detection on Raspberry Pi hardware.
-- Uses a compact YOLO model optimized for edge devices to balance accuracy and speed.
-- Simple setup intended to run with only a Raspberry Pi and a compatible camera (USB or Pi Camera).
-- Outputs bounding boxes and person counts suitable for area monitoring and simple analytics.
-- GUI interface for easy source selection and parameter tuning.
+Pi Detect is a lightweight human detection system designed specifically for Raspberry Pi that can perform real-time human recognition and counting functions on resource-constrained edge devices. This project combines advanced YOLO object detection models with optimized image processing techniques to provide users with accurate and efficient detection experience.
 
-## Why this project
+## Features
 
-Many modern object detection systems require powerful GPUs. This project focuses on a practical
-constraint: run a YOLO-based person detector on a Raspberry Pi alone (no external GPU). It targets use cases
-like small-room occupancy monitoring, queue length estimation, and basic access control where low-cost,
-low-power hardware is preferred.
+- 🎯 **Real-time Human Detection** - High-precision human recognition based on YOLOv8 model
+- 🚀 **Lightweight Design** - Optimized for edge devices like Raspberry Pi with low resource consumption
+- 🖥️ **User-friendly Interface** - Modern Fluent UI design for simple and intuitive operation
+- ⚙️ **Multi-source Input Support** - Supports camera, local files, and network URL input
+- 🎛️ **Adjustable Parameters** - Supports adjustment of confidence threshold, frame skipping, and image size
+- 📊 **Real-time Statistics** - Provides real-time statistics of detected people
 
-## Hardware requirements
+## Tech Stack
 
-- Raspberry Pi 4 or Pi 5 (4GB or 8GB recommended for best performance).
-- A camera: Raspberry Pi Camera Module or a USB webcam supported by the Pi.
-- MicroSD card with enough storage for OS and model files (16GB+ recommended).
-- Optional: a small fan or heatsink for sustained performance on Pi 4.
+- **Core Framework**: [Ultralytics YOLOv8](https://docs.ultralytics.com/)
+- **Image Processing**: [OpenCV](https://opencv.org/)
+- **UI Design**: [PyQt6](https://pypi.org/project/PyQt6/) + [PyQt-Fluent-Widgets](https://github.com/zhiyiYo/PyQt-Fluent-Widgets)
+- **Numerical Computing**: [NumPy](https://numpy.org/)
 
-## Software requirements
+## System Requirements
 
-- Raspberry Pi OS (32-bit or 64-bit) or another Debian-based distribution for Raspberry Pi.
-- Python 3.11+
+### Hardware Requirements
 
-## Installation
+- Raspberry Pi 4B/5 (4GB RAM or more recommended)
+- Compatible camera module (Pi Camera or USB Webcam)
+- Cooling device (recommended for long-term operation)
 
-1. Clone the repository:
-   ```
+### Software Requirements
+
+- Raspberry Pi OS (64-bit recommended)
+- Python 3.7+
+- pip
+
+## Installation Guide
+
+1. Clone the project locally:
+
+   ```bash
    git clone <repository-url>
    cd pi-detect
    ```
 
-2. Install required dependencies:
+2. Install dependencies:
+
+   ```bash
+   pip install -r requirements.txt
    ```
-   pip install ultralytics opencv-python numpy pillow requests
+
+3. Run the program:
+
+   ```bash
+   # Run the GUI version
+   python gui.py
+
+   # Run the lightweight command-line version (optimized for Raspberry Pi)
+   python lite_ver_forRpi.py
    ```
 
-## Usage
+## Usage Instructions
 
-You can use either the command-line interface or the graphical user interface:
+### GUI Version (gui.py)
 
-### Command-line interface
+- Provides complete visual interface and parameter adjustment functions
+- Supports switching between multiple input sources (camera, local files, network streams)
+- Displays detection results and people count in real-time
+- Adjustable parameters including confidence threshold, frame skipping, etc.
 
-```
-python main.py [--source CAMERA_INDEX] [--imgsz IMAGE_SIZE] [--skip SKIP_FRAMES] [--conf CONFIDENCE] [--show] [--device DEVICE]
-```
+### Command-line Version (lite_ver_forRpi.py)
 
-Example:
-```
-python main.py --source 0 --imgsz 416 --skip 2 --conf 0.3 --show
-```
-
-### Graphical User Interface
-
-Run the GUI version:
-```
-python gui.py
+```bash
+python lite_ver_forRpi.py --source 0 --imgsz 416 --skip 2 --conf 0.3
 ```
 
-In the GUI, you can:
-- Select between camera, local file, or network URL as media source
-- Adjust detection parameters (confidence threshold, skip frames, image size)
-- Start and stop detection with ease
-
-## Command-line Arguments
-
-- `--source`: Camera source index (default: 0)
+Parameter descriptions:
+- `--source`: Input source (default: 0, which means default camera)
 - `--imgsz`: Inference image size (default: 416)
-- `--skip`: Process every Nth frame (default: 2)
+- `--skip`: Frame skipping, process 1 frame out of every N frames (default: 2)
 - `--conf`: Confidence threshold (default: 0.3)
-- `--show`: Show display window
-- `--device`: Inference device (default: 'cpu')
+- `--show`: Display detection window
+- `--device`: Inference device (default: cpu)
+
+## Project Structure
+
+```
+pi-detect/
+├── gui.py                 # GUI main program
+├── lite_ver_forRpi.py     # Lightweight command-line version
+├── pyqt6_tutorial.py      # PyQt6 tutorial
+├── requirements.txt       # Project dependencies file
+├── README.md             # Project documentation (English)
+└── README_zh.md          # Project documentation (Chinese)
+```
+
+## Development Background
+
+This project originated from preliminary work in a science and technology innovation competition, where the basic function of using OpenCV to call models was completed. In the later stages, after in-depth design and optimization, the UI part took nearly 20 hours, evolving from a command-line interface to tkinter, PyQt, and finally adopting the modern Fluent UI design language, providing a more beautiful and user-friendly interface.
+
+## License
+
+This project is open-sourced under the MIT License. See the [LICENSE](LICENSE) file for details.
+# Pi Detect
+
+[![Hackatime Stats](https://hackatime-badge.hackclub.com/U09JFS1BU2V/pi-detect)](https://hackatime-badge.hackclub.com/U09JFS1BU2V/pi-detect)
+
+## Project Introduction
+
+Pi Detect is a lightweight human detection system designed specifically for Raspberry Pi that can perform real-time human recognition and counting functions on resource-constrained edge devices. This project combines advanced YOLO object detection models with optimized image processing techniques to provide users with accurate and efficient detection experience.
+
+## Features
+
+- 🎯 **Real-time Human Detection** - High-precision human recognition based on YOLOv8 model
+- 🚀 **Lightweight Design** - Optimized for edge devices like Raspberry Pi with low resource consumption
+- 🖥️ **User-friendly Interface** - Modern Fluent UI design for simple and intuitive operation
+- ⚙️ **Multi-source Input Support** - Supports camera, local files, and network URL input
+- 🎛️ **Adjustable Parameters** - Supports adjustment of confidence threshold, frame skipping, and image size
+- 📊 **Real-time Statistics** - Provides real-time statistics of detected people
+
+## Tech Stack
+
+- **Core Framework**: [Ultralytics YOLOv8](https://docs.ultralytics.com/)
+- **Image Processing**: [OpenCV](https://opencv.org/)
+- **UI Design**: [PyQt6](https://pypi.org/project/PyQt6/) + [PyQt-Fluent-Widgets](https://github.com/zhiyiYo/PyQt-Fluent-Widgets)
+- **Numerical Computing**: [NumPy](https://numpy.org/)
+
+## System Requirements
+
+### Hardware Requirements
+
+- Raspberry Pi 4B/5 (4GB RAM or more recommended)
+- Compatible camera module (Pi Camera or USB Webcam)
+- Cooling device (recommended for long-term operation)
+
+### Software Requirements
+
+- Raspberry Pi OS (64-bit recommended)
+- Python 3.7+
+- pip
+
+## Installation Guide
+
+1. Clone the project locally:
+
+   ```bash
+   git clone <repository-url>
+   cd pi-detect
+   ```
+
+2. Install dependencies:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Run the program:
+
+   ```bash
+   # Run the GUI version
+   python gui.py
+
+   # Run the lightweight command-line version (optimized for Raspberry Pi)
+   python lite_ver_forRpi.py
+   ```
+
+## Usage Instructions
+
+### GUI Version (gui.py)
+
+- Provides complete visual interface and parameter adjustment functions
+- Supports switching between multiple input sources (camera, local files, network streams)
+- Displays detection results and people count in real-time
+- Adjustable parameters including confidence threshold, frame skipping, etc.
+
+### Command-line Version (lite_ver_forRpi.py)
+
+```bash
+python lite_ver_forRpi.py --source 0 --imgsz 416 --skip 2 --conf 0.3
+```
+
+Parameter descriptions:
+- `--source`: Input source (default: 0, which means default camera)
+- `--imgsz`: Inference image size (default: 416)
+- `--skip`: Frame skipping, process 1 frame out of every N frames (default: 2)
+- `--conf`: Confidence threshold (default: 0.3)
+- `--show`: Display detection window
+- `--device`: Inference device (default: cpu)
+
+## Project Structure
+
+```
+pi-detect/
+├── gui.py                 # GUI main program
+├── lite_ver_forRpi.py     # Lightweight command-line version
+├── pyqt6_tutorial.py      # PyQt6 tutorial
+├── requirements.txt       # Project dependencies file
+├── README.md             # Project documentation (English)
+└── README_zh.md          # Project documentation (Chinese)
+```
+
+## Development Background
+
+This project originated from preliminary work in a science and technology innovation competition, where the basic function of using OpenCV to call models was completed. In the later stages, after in-depth design and optimization, the UI part took nearly 20 hours, evolving from a command-line interface to tkinter, PyQt, and finally adopting the modern Fluent UI design language, providing a more beautiful and user-friendly interface.
+
+## License
+
+This project is open-sourced under the MIT License. See the [LICENSE](LICENSE) file for details.
