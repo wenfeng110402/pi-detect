@@ -44,13 +44,11 @@ Pi Detect is a lightweight human detection system designed specifically for Rasp
    git clone <repository-url>
    cd pi-detect
    ```
-
 2. Install dependencies:
 
    ```bash
    pip install -r requirements.txt
    ```
-
 3. Run the program:
 
    ```bash
@@ -77,6 +75,7 @@ python lite_ver_forRpi.py --source 0 --imgsz 416 --skip 2 --conf 0.3
 ```
 
 Parameter descriptions:
+
 - `--source`: Input source (default: 0, which means default camera)
 - `--imgsz`: Inference image size (default: 416)
 - `--skip`: Frame skipping, process 1 frame out of every N frames (default: 2)
@@ -103,6 +102,7 @@ This project originated from preliminary work in a science and technology innova
 ## License
 
 This project is open-sourced under the MIT License. See the [LICENSE](LICENSE) file for details.
+
 # Pi Detect
 
 [![Hackatime Stats](https://hackatime-badge.hackclub.com/U09JFS1BU2V/pi-detect)](https://hackatime-badge.hackclub.com/U09JFS1BU2V/pi-detect)
@@ -149,13 +149,11 @@ Pi Detect is a lightweight human detection system designed specifically for Rasp
    git clone <repository-url>
    cd pi-detect
    ```
-
 2. Install dependencies:
 
    ```bash
    pip install -r requirements.txt
    ```
-
 3. Run the program:
 
    ```bash
@@ -180,31 +178,3 @@ Pi Detect is a lightweight human detection system designed specifically for Rasp
 ```bash
 python lite_ver_forRpi.py --source 0 --imgsz 416 --skip 2 --conf 0.3
 ```
-
-Parameter descriptions:
-- `--source`: Input source (default: 0, which means default camera)
-- `--imgsz`: Inference image size (default: 416)
-- `--skip`: Frame skipping, process 1 frame out of every N frames (default: 2)
-- `--conf`: Confidence threshold (default: 0.3)
-- `--show`: Display detection window
-- `--device`: Inference device (default: cpu)
-
-## Project Structure
-
-```
-pi-detect/
-├── gui.py                 # GUI main program
-├── lite_ver_forRpi.py     # Lightweight command-line version
-├── pyqt6_tutorial.py      # PyQt6 tutorial
-├── requirements.txt       # Project dependencies file
-├── README.md             # Project documentation (English)
-└── README_zh.md          # Project documentation (Chinese)
-```
-
-## Development Background
-
-This project originated from preliminary work in a science and technology innovation competition, where the basic function of using OpenCV to call models was completed. In the later stages, after in-depth design and optimization, the UI part took nearly 20 hours, evolving from a command-line interface to tkinter, PyQt, and finally adopting the modern Fluent UI design language, providing a more beautiful and user-friendly interface.
-
-## License
-
-This project is open-sourced under the MIT License. See the [LICENSE](LICENSE) file for details.
