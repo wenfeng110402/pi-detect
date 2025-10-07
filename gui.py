@@ -3,11 +3,11 @@ import cv2
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-                            QFileDialog, QStackedWidget, QButtonGroup, QRadioButton, QMessageBox, QLineEdit)
+                            QFileDialog, QStackedWidget, QButtonGroup, QRadioButton, QMessageBox, QLineEdit, QCheckBox)
 from qfluentwidgets import NavigationInterface, NavigationItemPosition, FluentWindow
 from qfluentwidgets import FluentIcon as FIF
 from qfluentwidgets import (SubtitleLabel, PrimaryPushButton, Slider, SpinBox, ComboBox,
-                           setTheme, Theme, InfoBar, InfoBarPosition, PushButton, LineEdit, CardWidget)
+                           setTheme, Theme, InfoBar, InfoBarPosition, PushButton, LineEdit, CardWidget, SwitchButton)
 from ultralytics import YOLO
 import numpy as np
 from pathlib import Path
@@ -21,6 +21,7 @@ class PersonDetectionGUI(FluentWindow):
         
         # Initialize variables
         self.model = None
+        self.pose_model = None
         self.cap = None
         self.is_detecting = False
         self.is_image_mode = False
@@ -28,20 +29,21 @@ class PersonDetectionGUI(FluentWindow):
         self.conf_threshold = 0.3
         self.skip_frames = 2
         self.img_size = 416
+        self.enable_pose_detection = False
         
         # Initialize source variables
         self.camera_index = 0
         self.file_path = ""
         self.url = ""
         
-        # Model variables - 所有YOLOv8模型都支持自动下载
-        self.available_models = ["yolov8n.pt", "yolov8s.pt", "yolov8m.pt", "yolov8l.pt", "yolov8x.pt"]
+        # Model variables - 只保留YOLOv11模型
+        self.available_models = ["yolo11n.pt", "yolo11s.pt", "yolo11m.pt", "yolo11l.pt", "yolo11x.pt"]
+        
+        # Pose detection models - 只保留YOLOv11的pose模型
+        self.pose_models = ["yolo11n-pose.pt", "yolo11s-pose.pt", "yolo11m-pose.pt", "yolo11l-pose.pt", "yolo11x-pose.pt"]
         
         # UI initialization flag
         self.ui_initialized = False
-        
-        # InfoBar reference for model loading
-        self.model_loading_infobar = None
         
         # Load model
         self.load_model()
@@ -213,11 +215,39 @@ class PersonDetectionGUI(FluentWindow):
         model_selection_layout = QHBoxLayout()
         model_selection_layout.addWidget(QLabel("Model:"))
         self.model_combo = ComboBox()
-        self.update_model_combo()  # Populate with available models
+        # Populate with available models directly without update_model_combo method
+        for model in self.available_models:
+            self.model_combo.addItem(model)
         model_selection_layout.addWidget(self.model_combo)
         model_layout.addLayout(model_selection_layout)
         
         layout.addWidget(model_card)
+        
+        # Pose detection setting
+        pose_card = CardWidget()
+        pose_card.setBorderRadius(8)
+        pose_layout = QVBoxLayout(pose_card)
+        
+        # Pose detection enable switch
+        pose_enable_layout = QHBoxLayout()
+        pose_enable_layout.addWidget(QLabel("Enable Pose Detection:"))
+        self.pose_enable_switch = SwitchButton()
+        self.pose_enable_switch.checkedChanged.connect(self.on_pose_enable_changed)
+        pose_enable_layout.addWidget(self.pose_enable_switch)
+        pose_layout.addLayout(pose_enable_layout)
+        
+        # Pose model selection combo
+        pose_model_layout = QHBoxLayout()
+        pose_model_layout.addWidget(QLabel("Pose Model:"))
+        self.pose_model_combo = ComboBox()
+        # Populate with available pose models directly without update_pose_model_combo method
+        for model in self.pose_models:
+            self.pose_model_combo.addItem(model)
+        self.pose_model_combo.setEnabled(False)  # Disabled by default
+        pose_model_layout.addWidget(self.pose_model_combo)
+        pose_layout.addLayout(pose_model_layout)
+        
+        layout.addWidget(pose_card)
         
         layout.addStretch()
         return page
@@ -278,6 +308,8 @@ class PersonDetectionGUI(FluentWindow):
         self.size_spinbox.valueChanged.connect(self.on_img_size_changed)
         self.camera_index_spinbox.valueChanged.connect(self.on_camera_index_changed)
         self.model_combo.currentTextChanged.connect(self.on_model_changed)
+        self.pose_model_combo.currentTextChanged.connect(self.on_pose_model_changed)
+        self.pose_enable_switch.checkedChanged.connect(self.on_pose_enable_changed)
         
     def on_source_changed(self):
         # Clear current input layout widgets
@@ -345,91 +377,44 @@ class PersonDetectionGUI(FluentWindow):
     def on_camera_index_changed(self, value):
         self.camera_index = value
         
-    def on_model_changed(self, model_name):
-        """当模型选择改变时重新加载模型"""
-        self.load_model()
-        
     def switch_to_page(self, index):
         self.stacked_widget.setCurrentIndex(index)
         
     def load_model(self):
         try:
-            model_name = self.model_combo.currentText() if hasattr(self, 'model_combo') else 'yolov8n.pt'
-                
-            # Show loading info bar
-            self.model_loading_infobar = InfoBar.info(
-                title="Model Loading",
-                content=f"Loading model {model_name}...",
-                orient=Qt.Orientation.Horizontal,
-                isClosable=True,
-                position=InfoBarPosition.TOP_RIGHT,
-                duration=-1,  # Keep showing until we close it
-                parent=self
-            )
-            
-            # Process events to show the info bar immediately
-            QApplication.processEvents()
-                
-            # Use Ultralytics auto-download feature
+            model_name = self.model_combo.currentText() if hasattr(self, 'model_combo') and self.model_combo.currentText() else 'yolo11n.pt'
             self.model = YOLO(model_name)
-            
-            # Close loading info bar with a slight delay to avoid RuntimeError
-            QTimer.singleShot(100, self._close_model_loading_infobar_success)
-            
-            InfoBar.success(
-                title="Model Loaded",
-                content=f"Model {model_name} loaded successfully",
-                orient=Qt.Orientation.Horizontal,
-                isClosable=True,
-                position=InfoBarPosition.TOP_RIGHT,
-                duration=2000,
-                parent=self
-            )
             print(f"Model {model_name} loaded successfully")
         except Exception as e:
-            # Close loading info bar with a slight delay to avoid RuntimeError
-            QTimer.singleShot(100, lambda: self._close_model_loading_infobar_error(str(e)))
-            
-    def _close_model_loading_infobar_success(self):
-        """延迟关闭加载提示InfoBar（成功情况）"""
-        if self.model_loading_infobar:
-            try:
-                self.model_loading_infobar.close()
-            except RuntimeError:
-                # Ignore "wrapped C/C++ object has been deleted" error
-                pass
-            finally:
-                self.model_loading_infobar = None
+            print(f"Model loading failed: {str(e)}")
+        
+    def load_pose_model(self):
+        """加载姿态检测模型"""
+        try:
+            if not self.enable_pose_detection:
+                return
                 
-    def _close_model_loading_infobar_error(self, error_message):
-        """延迟关闭加载提示InfoBar（错误情况）并显示错误信息"""
-        if self.model_loading_infobar:
-            try:
-                self.model_loading_infobar.close()
-            except RuntimeError:
-                # Ignore "wrapped C/C++ object has been deleted" error
-                pass
-            finally:
-                self.model_loading_infobar = None
-                
-        InfoBar.error(
-            title="Model Loading Failed",
-            content=f"Failed to load model: {error_message}",
-            orient=Qt.Orientation.Horizontal,
-            isClosable=True,
-            position=InfoBarPosition.TOP_RIGHT,
-            duration=3000,
-            parent=self
-        )
-        print(f"Model loading failed: {error_message}")
+            pose_model_name = self.pose_model_combo.currentText() if hasattr(self, 'pose_model_combo') and self.pose_model_combo.currentText() else 'yolo11n-pose.pt'
+            self.pose_model = YOLO(pose_model_name)
+            print(f"Pose model {pose_model_name} loaded successfully")
+        except Exception as e:
+            print(f"Pose model loading failed: {str(e)}")
+        
+    def on_model_changed(self, model_text):
+        """当模型选择改变时重新加载模型"""
+        self.load_model()
+        
+    def on_pose_model_changed(self, model_text):
+        """当姿态模型选择改变时重新加载模型"""
+        if self.enable_pose_detection:
+            self.load_pose_model()
             
-    def update_model_combo(self):
-        """更新模型选择下拉框"""
-        self.model_combo.clear()
-        # Add all common models
-        common_models = ["yolov8n.pt", "yolov8s.pt", "yolov8m.pt", "yolov8l.pt", "yolov8x.pt"]
-        for model in common_models:
-            self.model_combo.addItem(model)
+    def on_pose_enable_changed(self, checked):
+        """当姿态检测启用状态改变时"""
+        self.enable_pose_detection = checked
+        self.pose_model_combo.setEnabled(checked)
+        if checked:
+            self.load_pose_model()
             
     def start_detection(self):
         self.is_detecting = True
@@ -552,6 +537,20 @@ class PersonDetectionGUI(FluentWindow):
                         label = f'Person {conf:.2f}'
                         cv2.putText(frame, label, (x1, max(15, y1 - 10)), 
                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+            
+            # Run pose detection if enabled
+            if self.enable_pose_detection and self.pose_model is not None:
+                pose_results = self.pose_model(small_rgb, imgsz=imgsz, conf=self.conf_threshold)
+                if len(pose_results) > 0:
+                    pose_r = pose_results[0]
+                    keypoints = getattr(pose_r, 'keypoints', None)
+                    if keypoints is not None:
+                        # Scale keypoints to original frame size
+                        for kp in keypoints.xy:
+                            if len(kp) > 0:
+                                scaled_kp = kp.cpu().numpy() * np.array([scale_x, scale_y])
+                                for point in scaled_kp.astype(int):
+                                    cv2.circle(frame, tuple(point), 5, (0, 0, 255), -1)
             
             # Display person count
             cv2.putText(frame, f'Persons: {person_count}', (10, 30), 
